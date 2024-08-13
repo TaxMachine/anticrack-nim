@@ -204,3 +204,38 @@ proc CheckDeviceDrivers*(): bool =
                 return true
 
     dealloc(pDeviceList)
+
+proc CheckDlls*(): bool =
+    for dir in ["C:\\Program Files\\VMware", "C:\\Program Files\\oracle\\virtualbox guest additions", "C:\\Windows\\System32"]:
+        for file in walkDir(dir):
+            if file.kind != pcFile:
+                continue
+            let path = splitFile(file.path)
+            if path.ext != ".dll":
+                continue
+            if path.name.toLowerAscii() & ".dll" in BAD_DLL_NAMES:
+                return true
+
+proc CheckWine*(): bool =
+    var hModule = LLGetModuleHandle("kernel32.dll")
+    if LLGetProcAddress(hModule, "wine_get_unix_file_name") != 0:
+        return true
+
+proc CheckVMAgentProcesses*(): bool =
+    var pe32: PROCESSENTRY32
+
+    var hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if hSnap == INVALID_HANDLE_VALUE:
+        return false
+
+    pe32.dwSize = cast[DWORD](sizeof(PROCESSENTRY32))
+
+    if Process32First(hSnap, &pe32) == FALSE:
+        NtClose(hSnap)
+        return false
+
+    while Process32Next(hSnap, &pe32):
+        var procName = $cast[LPWSTR](addr pe32.szExeFile[0])
+        echo procName
+        if procName.toLowerAscii() in BAD_PROCESS_NAMES:
+            return true
