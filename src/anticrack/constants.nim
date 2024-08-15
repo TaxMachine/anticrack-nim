@@ -31,17 +31,25 @@ proc LLGetProcAddress*(hModule: HMODULE, function: string): HANDLE =
     LdrGetProcedureAddressForCaller(hModule, ansiString, 0, &hFunc, 0, 0)
     return hFunc
 
-proc NtSetInformationThread*(thHandle: HANDLE, thInfoClass: THREAD_INFORMATION_CLASS, thInfo: PVOID, thInfoLength: ULONG): NTSTATUS =
+#[
+# I have to find a way to get this working
+proc HiddenCall[T](lbName: string, procName: string): T =
+    var hModule = LLGetModuleHandle(lbName)
+    var hFunc = LLGetProcAddress(hModule, procName)
+    return cast[T](hFunc)
+]#
+
+proc NtSetInformationThread*(thHandle: HANDLE, thInfoClass: THREAD_INFORMATION_CLASS, thInfo: PVOID, thInfoLength: ULONG): NTSTATUS {.cdecl.} =
     var hModule = LLGetModuleHandle("ntdll.dll")
     var hFunc = LLGetProcAddress(hModule, "NtSetInformationThread")
-    return cast[proc(thHandle: HANDLE, thInfoClass: THREAD_INFORMATION_CLASS, thInfo: PVOID, thInfoLength: ULONG): NTSTATUS {.cdecl.}](hfunc)(thHandle, thInfoClass, thInfo, thInfoLength)
+    return cast[typeof(NtSetInformationThread)](hfunc)(thHandle, thInfoClass, thInfo, thInfoLength)
 
-proc NtSetDebugFilterState*(componentId: ULONG, level: ULONG, state: WINBOOL): NTSTATUS =
+proc NtSetDebugFilterState*(componentId: ULONG, level: ULONG, state: WINBOOL): NTSTATUS {.cdecl.} =
     var hModule = LLGetModuleHandle("ntdll.dll")
     var hFunc = LLGetProcAddress(hModule, "NtSetDebugFilterState")
-    return cast[proc(componentId: ULONG, level: ULONG, state: WINBOOL): NTSTATUS {.cdecl.}](hFunc)(componentId, level, state)
+    return cast[typeof(NtSetDebugFilterState)](hFunc)(componentId, level, state)
 
-proc NtPowerInformation*(informationLevel: POWER_INFORMATION_LEVEL, inputBuffer: PVOID, inputBufferLength: ULONG, outputBuffer: PVOID, outputBufferLength: ULONG): NTSTATUS =
+proc NtPowerInformation*(informationLevel: POWER_INFORMATION_LEVEL, inputBuffer: PVOID, inputBufferLength: ULONG, outputBuffer: PVOID, outputBufferLength: ULONG): NTSTATUS {.cdecl.} =
     var hModule = LLGetModuleHandle("ntdll.dll")
     var hFunc = LLGetProcAddress(hModule, "NtPowerInformation")
-    return cast[proc(informationLevel: POWER_INFORMATION_LEVEL, inputBuffer: PVOID, inputBufferLength: ULONG, outputBuffer: PVOID, outputBufferLength: ULONG): NTSTATUS {.cdecl.}](hFunc)(informationLevel, inputBuffer, inputBufferLength, outputBuffer, outputBufferLength)
+    return cast[typeof(NtPowerInformation)](hFunc)(informationLevel, inputBuffer, inputBufferLength, outputBuffer, outputBufferLength)
