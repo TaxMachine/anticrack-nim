@@ -120,6 +120,7 @@ proc CheckDrivers*(): bool =
 
 proc CheckPowerState*(): bool =
     var state: SYSTEM_POWER_CAPABILITIES
+
     if NtPowerInformation(systemPowerCapabilities, NULL, 0, &state, ULONG(sizeof(SYSTEM_POWER_CAPABILITIES))) != STATUS_SUCCESS:
         return false
 
@@ -236,6 +237,18 @@ proc CheckVMAgentProcesses*(): bool =
 
     while Process32Next(hSnap, &pe32):
         var procName = $cast[LPWSTR](addr pe32.szExeFile[0])
-        echo procName
         if procName.toLowerAscii() in BAD_PROCESS_NAMES:
+            return true
+
+proc CheckPortConnectors*(): bool =
+    var wmi = GetObject("winmgmts:{impersonationLevel=impersonate}!\\\\.\\root\\cimv2")
+    for i in wmi.ExecQuery("SELECT Name FROM Win32_PortConnector"):
+        return false
+    return true
+
+proc CheckNamedPipes*(): bool =
+    for pipe in BAD_NAMED_PIPES:
+        var hPipe = CreateFile(pipe, GENERIC_READ or GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL)
+        if hPipe != INVALID_HANDLE_VALUE:
+            NtClose(hPipe)
             return true

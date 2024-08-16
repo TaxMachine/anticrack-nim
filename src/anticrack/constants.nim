@@ -5,6 +5,7 @@ let BAD_WINDOW_NAMES*: array[10, string] = ["x32dbg", "x64dbg", "windbg", "ollyd
 let BAD_DLL_NAMES*: array[21, string] = ["sbiedll.dll", "cmdvrt32.dll", "cmdvrt64.dll", "sxin.dll", "cockoomon.dll", "vboxdisp.dll", "vboxhook.dll", "vboxmrxnp.dll", "vboxogl.dll", "vboxoglarrayspu.dll", "vboxoglcrutil.dll", "vboxoglerrorspu.dll", "vboxoglfeedbackspu.dll", "vboxoglpackspu.dll", "vboxoglpassthroughspu.dll", "vboxdispd3d.dll", "vboxdx.dll", "vboxgl.dll", "vboxhook.dll", "vboxvboxnine.dll", "vboxsvga.dll"]
 let BAD_USERNAMES*: array[11, string] = ["Johnson", "Miller", "malware", "maltest", "CurrentUser", "Sandbox", "virus", "John Doe", "test user", "sand box", "WDAGUtilityAccount"]
 let BAD_DRIVER_NAMES*: array[9, string] = ["balloon.sys", "netkvm.sys", "vioinput", "viofs.sys", "vioser.sys", "vboxsf.sys", "vboxguest.sys", "vboxmouse.sys", "vboxwddm.sys"]
+let BAD_NAMED_PIPES*: array[8, string] = ["\\\\.\\pipe\\cuckoo", "\\\\.\\HGFS", "\\\\.\\vmci", "\\\\.\\VBoxMiniRdrDN", "\\\\.\\VBoxGuest", "\\\\.\\pipe\\VBoxMiniRdDN", "\\\\.\\VBoxTrayIPC", "\\\\.\\pipe\\VBoxTrayIPC"]
 let BAD_PROCESS_NAMES*: array[5, string] = ["vboxservice.exe", "vboxtray.exe", "vgauthservice.exe", "vmusrvc.exe", "qemu-ga.exe"]
 let BAD_DEVICE_DRIVER_NAMES*: array[2, string] = ["vid_80ee", "pnp0f03"]
 let BAD_SERVICE_NAMES*: array[3, string] = ["vmbus", "VMBusHID", "hyperkbd"]
@@ -31,25 +32,16 @@ proc LLGetProcAddress*(hModule: HMODULE, function: string): HANDLE =
     LdrGetProcedureAddressForCaller(hModule, ansiString, 0, &hFunc, 0, 0)
     return hFunc
 
-#[
-# I have to find a way to get this working
-proc HiddenCall[T](lbName: string, procName: string): T =
+proc HiddenCall*[T](lbName: string, procName: string): T {.inline.} =
     var hModule = LLGetModuleHandle(lbName)
     var hFunc = LLGetProcAddress(hModule, procName)
     return cast[T](hFunc)
-]#
 
-proc NtSetInformationThread*(thHandle: HANDLE, thInfoClass: THREAD_INFORMATION_CLASS, thInfo: PVOID, thInfoLength: ULONG): NTSTATUS {.cdecl.} =
-    var hModule = LLGetModuleHandle("ntdll.dll")
-    var hFunc = LLGetProcAddress(hModule, "NtSetInformationThread")
-    return cast[typeof(NtSetInformationThread)](hfunc)(thHandle, thInfoClass, thInfo, thInfoLength)
+proc NtSetInformationThread*(thHandle: HANDLE, thInfoClass: THREAD_INFORMATION_CLASS, thInfo: PVOID, thInfoLength: ULONG): NTSTATUS {.cdecl, inline.} =
+    return HiddenCall[typeof(NtSetInformationThread)]("ntdll.dll", "NtSetInformationThread")(thHandle, thInfoClass, thInfo, thInfoLength)
 
-proc NtSetDebugFilterState*(componentId: ULONG, level: ULONG, state: WINBOOL): NTSTATUS {.cdecl.} =
-    var hModule = LLGetModuleHandle("ntdll.dll")
-    var hFunc = LLGetProcAddress(hModule, "NtSetDebugFilterState")
-    return cast[typeof(NtSetDebugFilterState)](hFunc)(componentId, level, state)
+proc NtSetDebugFilterState*(componentId: ULONG, level: ULONG, state: WINBOOL): NTSTATUS {.cdecl, inline.} =
+    return HiddenCall[typeof(NtSetDebugFilterState)]("ntdll.dll", "NtSetDebugFilterState")(componentId, level, state)
 
-proc NtPowerInformation*(informationLevel: POWER_INFORMATION_LEVEL, inputBuffer: PVOID, inputBufferLength: ULONG, outputBuffer: PVOID, outputBufferLength: ULONG): NTSTATUS {.cdecl.} =
-    var hModule = LLGetModuleHandle("ntdll.dll")
-    var hFunc = LLGetProcAddress(hModule, "NtPowerInformation")
-    return cast[typeof(NtPowerInformation)](hFunc)(informationLevel, inputBuffer, inputBufferLength, outputBuffer, outputBufferLength)
+proc NtPowerInformation*(informationLevel: POWER_INFORMATION_LEVEL, inputBuffer: PVOID, inputBufferLength: ULONG, outputBuffer: PVOID, outputBufferLength: ULONG): NTSTATUS {.cdecl, inline.} =
+    return HiddenCall[typeof(NtPowerInformation)]("ntdll.dll", "NtPowerInformation")(informationLevel, inputBuffer, inputBufferLength, outputBuffer, outputBufferLength)

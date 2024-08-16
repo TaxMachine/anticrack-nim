@@ -2,6 +2,6 @@
 # exports the main API in this file. Note that you cannot rename this file
 # but you can remove it if you wish.
 
-import anticrack/antidebug
+import anticrack/[antidebug, antivm, exploits]
 
-export antidebug
+export antidebug, antivm, exploits
